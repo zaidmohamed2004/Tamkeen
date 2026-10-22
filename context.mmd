@@ -1,0 +1,22 @@
+flowchart LR
+  seeker["<b>Job seeker with disability</b><br/>[Person]<br/>visual, hearing, mobility, cognitive"]
+  coach["<b>Job coach / family helper</b><br/>[Person, optional]"]
+  hr["<b>Employer HR</b><br/>[Person]"]
+  admin["<b>Admin / verifier</b><br/>[Person]"]
+  sys["<b>Tamkeen</b><br/>[Software system]<br/>Inclusive employment and<br/>5% quota compliance platform"]
+  idp["<b>Firebase Authentication</b><br/>[External system]<br/>identity provider"]
+  mail["<b>Brevo email service</b><br/>[External system]"]
+  app["<b>Tamkeen mobile app</b><br/>[External system]<br/>other accessibility pillars"]
+  seeker -->|builds profile, searches, applies<br/>HTTPS| sys
+  coach -.->|helps, with permission<br/>HTTPS| sys
+  hr -->|posts jobs, reviews candidates,<br/>tracks quota - HTTPS| sys
+  admin -->|verifies companies<br/>and PwD status - HTTPS| sys
+  sys -->|verifies ID tokens<br/>HTTPS| idp
+  sys -->|sends status emails<br/>SMTP| mail
+  app -->|reads jobs and profiles<br/>REST/JSON over HTTPS| sys
+  classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+  classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
+  classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+  class seeker,coach,hr,admin person
+  class sys system
+  class idp,mail,app external

@@ -1,0 +1,22 @@
+flowchart LR
+  U(("<b>Utility</b><br/>Tamkeen"))
+  U --> US[Usability]
+  U --> SE[Security]
+  U --> AV[Availability]
+  U --> PE[Performance]
+  U --> MO[Modifiability]
+  U --> IO[Interoperability]
+  US --> u1["QAS-1: Blind user applies with screen reader and keyboard; 0 serious axe errors, ≤ 15 min<br/><b>H, H</b>"]
+  US --> u2["QAS-2: Easy-read user applies in ≤ 6 screens, ≤ 10 min<br/><b>H, M</b>"]
+  SE --> s1["QAS-3: Employer views never return disability data; 100% of contract tests pass<br/><b>H, H</b>"]
+  SE --> s2["QAS-4: Cross-company requests 100% denied and logged within 1 s<br/><b>H, M</b>"]
+  AV --> a1["QAS-5: Server asleep: 0 applications lost, submit completes ≤ 90 s after wake<br/><b>M, H</b>"]
+  PE --> p1["QAS-6: 95% of job searches < 1.5 s with 100 concurrent users<br/><b>M, M</b>"]
+  MO --> m1["QAS-7: Quota rule change in ≤ 10 min, 0 code changes, 0 redeploys<br/><b>M, M</b>"]
+  IO --> i1["QAS-8: Mobile app requests 100% correctly processed; invalid tokens 100% rejected and logged<br/><b>H, H</b>"]
+  classDef root fill:#1168bd,stroke:#0b4884,color:#ffffff
+  classDef qa fill:#dbe8f6,stroke:#1168bd,color:#0b2540
+  classDef leaf fill:#ffffff,stroke:#8a8a8a,color:#1a1a1a
+  class U root
+  class US,SE,AV,PE,MO,IO qa
+  class u1,u2,s1,s2,a1,p1,m1,i1 leaf
