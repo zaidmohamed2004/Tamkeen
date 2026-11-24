@@ -1,0 +1,24 @@
+name: docs checks
+on:
+  push:
+    paths: ['docs/**', 'redocly.yaml']
+  pull_request:
+    paths: ['docs/**', 'redocly.yaml']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm install --no-save --prefix docs/tools @redocly/cli@2 ajv@8 ajv-formats@3
+      - name: Lint OpenAPI
+        run: docs/tools/node_modules/.bin/redocly lint docs/api/openapi.yaml --config redocly.yaml
+      - name: Validate event examples
+        run: NODE_PATH=docs/tools/node_modules node docs/tools/validate-events.js
+      - name: Check traceability coverage
+        run: python3 docs/traceability/check_traceability.py

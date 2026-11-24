@@ -1,0 +1,17 @@
+{
+  "name": "tamkeen-docs-tools",
+  "private": true,
+  "description": "Checks for the M2 architecture sources. Run from the repository root.",
+  "scripts": {
+    "lint:api": "redocly lint docs/api/openapi.yaml --config redocly.yaml",
+    "validate:events": "node docs/tools/validate-events.js",
+    "check:trace": "python3 docs/traceability/check_traceability.py",
+    "render:diagrams": "for f in docs/diagrams/*.mmd; do mmdc -i \"$f\" -o \"${f%.mmd}.svg\"; done"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.4.0",
+    "@redocly/cli": "^2.0.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

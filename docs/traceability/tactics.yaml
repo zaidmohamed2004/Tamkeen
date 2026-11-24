@@ -1,0 +1,7 @@
+# Tactic names as used in CSE4203 Lecture 2 (Bass, Clements & Kazman catalog). The check script only accepts these.
+usability: [maintain user model, provide feedback, pause/resume, cancel, aggregate]
+security: [authenticate actors, authorize actors, limit access, limit exposure, encrypt data, separate entities, detect intrusion, verify message integrity, revoke access, inform actors, maintain audit trail]
+availability: [ping/echo, exception detection, retry, degradation, transactions]
+performance: [limit event response, increase efficiency, maintain multiple copies of data, bound queue sizes, reduce overhead]
+modifiability: [defer binding time, increase semantic coherence, encapsulate, restrict dependencies]
+interoperability: [tailor interface, orchestrate, discover service]
