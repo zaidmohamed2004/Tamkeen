@@ -1,0 +1,14 @@
+{
+  "id": "0b8f6c1e-4a5b-4c3d-9e2f-000000000002",
+  "type": "application.status_changed",
+  "version": 1,
+  "occurredAt": "2026-11-25T10:00:00Z",
+  "producer": "Applications Module",
+  "traceId": "t-123",
+  "data": {
+    "applicationId": "6740a1f2c9e77a0012ab0001",
+    "seekerUid": "u_mahmoud",
+    "from": "offer",
+    "to": "hired"
+  }
+}

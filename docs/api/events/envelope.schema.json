@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zaidmohamed2004/Tamkeen/docs/api/events/envelope.schema.json",
+  "title": "Event envelope",
+  "description": "Every event on the Event Bus and in the outbox collection uses this envelope.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurredAt",
+    "producer",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event id, also the outbox row id; consumers ignore ids they already handled."
+    },
+    "type": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "producer": {
+      "type": "string",
+      "enum": [
+        "Applications Module",
+        "Consent Module",
+        "Quota Module"
+      ]
+    },
+    "traceId": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object"
+    }
+  }
+}

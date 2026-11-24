@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zaidmohamed2004/Tamkeen/docs/api/events/application.status_changed.schema.json",
+  "title": "application.status_changed",
+  "description": "Employer changed a status. Consumers: Notifications Module (email), Audit Module.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "application.status_changed"
+    },
+    "version": {
+      "const": 1
+    },
+    "producer": {
+      "const": "Applications Module"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applicationId",
+        "seekerUid",
+        "from",
+        "to"
+      ],
+      "properties": {
+        "applicationId": {
+          "type": "string"
+        },
+        "seekerUid": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "enum": [
+            "viewed",
+            "interview",
+            "offer",
+            "hired",
+            "declined",
+            "withdrawn"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1019 @@
+openapi: 3.1.0
+info:
+  title: Tamkeen API
+  version: 1.0.0
+  summary: Inclusive employment and 5% quota compliance platform (CSE4203, team Success Enablers).
+  description: |
+    Main interfaces of the Tamkeen API container (see docs/diagrams/c4-l3-api-components.mmd).
+    Every request passes Rate Limiter, Auth Guard, Access Policy and, for POST, Idempotency Filter.
+    Errors use `application/problem+json` (RFC 9457, which replaced RFC 7807 with the same format).
+    Employer-facing responses never contain disability status, card files or consent records (QAS-3).
+  license:
+    name: MIT
+    identifier: MIT
+  contact:
+    name: Success Enablers
+    url: https://github.com/zaidmohamed2004/Tamkeen
+servers:
+  - url: https://tamkeen-api.onrender.com/v1
+    description: Production demo (Render free web service; may take about a minute to wake)
+  - url: http://{host}/v1
+    description: Local development (docker compose)
+    variables:
+      host:
+        default: 127.0.0.1:8080
+        description: Address of the local API container.
+security:
+  - firebaseIdToken: []
+tags:
+  - name: Health
+    description: Liveness, used by Uptime Monitor and by the Web App while waiting for wake-up.
+  - name: Accounts
+    description: Accounts Module. Current user and accessibility preferences.
+  - name: Profiles
+    description: Profiles Module. Skills and work needs (never a diagnosis).
+  - name: Consents
+    description: Consent Module. The only door to the Sensitive Store.
+  - name: Jobs
+    description: Jobs Module and Matching Module.
+  - name: Applications
+    description: Applications Module.
+  - name: Quota
+    description: Quota Module.
+  - name: Verification
+    description: Verification Module.
+paths:
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: Liveness check
+      description: Public. Returns 200 once the instance is awake. Used by Uptime Monitor (ping/echo) and by the Web App retry loop in SD-2.
+      security: []
+      responses:
+        '200':
+          description: API is up.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /me:
+    get:
+      tags: [Accounts]
+      operationId: getMe
+      summary: Current user, role and preferences
+      description: Accounts Module. Role comes from the users collection, never from the token claims.
+      responses:
+        '200':
+          description: The signed-in user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /me/preferences:
+    put:
+      tags: [Accounts]
+      operationId: putPreferences
+      summary: Save accessibility preferences (QAS-1, QAS-2 user model)
+      description: Accounts Module. Stored once and applied by the Web App shell on every screen (maintain user model).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Preferences'
+      responses:
+        '200':
+          description: Saved preferences.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preferences'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /profiles/me:
+    get:
+      tags: [Profiles]
+      operationId: getMyProfile
+      summary: Own talent profile
+      description: Profiles Module. Role job_seeker only.
+      responses:
+        '200':
+          description: The job seeker's profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Profiles]
+      operationId: putMyProfile
+      summary: Create or replace own talent profile
+      description: Profiles Module. Role job_seeker only. Work needs are a fixed list; there is no diagnosis field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Profile'
+      responses:
+        '200':
+          description: Saved profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /consents:
+    post:
+      tags: [Consents]
+      operationId: giveConsent
+      summary: Give explicit consent before disability data is stored (FR-04)
+      description: Consent Module. Must succeed before any verification upload. Role job_seeker or coach acting with permission.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentRequest'
+      responses:
+        '201':
+          description: Consent recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Consent'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+  /consents/{consentId}:
+    delete:
+      tags: [Consents]
+      operationId: withdrawConsent
+      summary: Withdraw consent; sensitive data is hidden at once and deleted within 24 h (QAS-3)
+      description: Consent Module. Hides sensitive fields immediately and schedules deletion within 24 h; publishes consent.withdrawn.
+      parameters:
+        - $ref: '#/components/parameters/ConsentId'
+      responses:
+        '204':
+          description: Consent withdrawn.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /jobs:
+    get:
+      tags: [Jobs]
+      operationId: searchJobs
+      summary: Search jobs with accessibility filters (FR-06, QAS-6)
+      description: Jobs Module through Search Cache (60 s TTL). Anonymous calls are allowed; signed-in job seekers also get match reasons.
+      security:
+        - firebaseIdToken: []
+        - {}
+      parameters:
+        - name: q
+          in: query
+          description: Free-text keyword.
+          schema:
+            type: string
+            maxLength: 100
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: remote
+          in: query
+          schema:
+            type: boolean
+        - name: accommodations
+          in: query
+          description: Every listed accommodation must be offered.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Accommodation'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          description: Limit event response tactic; maximum 20.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 20
+      responses:
+        '200':
+          description: One page of matching jobs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPage'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [Jobs]
+      operationId: createJob
+      summary: Post a job with the accommodations offered (FR-05)
+      description: Jobs Module. Role hr of a verified company. The Access Policy sets companyId from the caller, never from the body.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobInput'
+      responses:
+        '201':
+          description: Job created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+  /jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      operationId: getJob
+      summary: Job details, with match reasons when the caller is a job seeker (FR-10)
+      description: Jobs Module plus Matching Module for job seekers.
+      security:
+        - firebaseIdToken: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: The job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /jobs/{jobId}/applications:
+    get:
+      tags: [Applications]
+      operationId: listJobApplications
+      summary: Applicants for one job (employer view, role projection)
+      description: "Applications Module, employer projection only. Access Policy checks the job belongs to the caller's company."
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Applicants, projected for the employer role.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmployerApplicationView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /applications:
+    post:
+      tags: [Applications]
+      operationId: submitApplication
+      summary: Apply to a job (FR-07). Safe to retry with the same Idempotency-Key (QAS-5).
+      description: Applications Module behind the Idempotency Filter. Writes the application and an outbox event in one transaction, then publishes application.submitted.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationInput'
+      responses:
+        '201':
+          description: Application created, or the stored response replayed for a repeated key.
+          headers:
+            Idempotent-Replayed:
+              description: true when this response was replayed from an earlier request with the same key.
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    get:
+      tags: [Applications]
+      operationId: listMyApplications
+      summary: Own applications and their status (FR-07)
+      description: Applications Module. Role job_seeker, own applications only.
+      responses:
+        '200':
+          description: The job seeker's applications.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Application'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /applications/{applicationId}/status:
+    patch:
+      tags: [Applications]
+      operationId: changeApplicationStatus
+      summary: Employer changes status; "hired" triggers the employee.hired event (FR-08)
+      description: "Applications Module. Role hr of the job's company. Publishes application.status_changed and, for hired, employee.hired."
+      parameters:
+        - $ref: '#/components/parameters/ApplicationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusChange'
+      responses:
+        '200':
+          description: Updated application (employer projection).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployerApplicationView'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidTransition'
+  /companies/{companyId}/quota:
+    get:
+      tags: [Quota]
+      operationId: getQuota
+      summary: Quota dashboard for one company (FR-08)
+      description: Quota Module. Role hr of that company or admin. Reads the latest snapshot; never returns who is a PwD.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+      responses:
+        '200':
+          description: Latest quota snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuotaSnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/quota-rules:
+    post:
+      tags: [Quota]
+      operationId: addQuotaRuleVersion
+      summary: Add a new quota rule version without a code change (QAS-7)
+      description: Quota Module. Role admin. Adds a rule version with an effective date; past snapshots keep their version.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuotaRuleInput'
+      responses:
+        '201':
+          description: Rule version stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuotaRule'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+  /verification-requests:
+    post:
+      tags: [Verification]
+      operationId: createVerificationRequest
+      summary: Upload an Integrated Services Card or company papers for review (FR-09)
+      description: Verification Module stores the file through the Consent Module in the Sensitive Store (GridFS, max 2 MB).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [kind, file, consentId]
+              properties:
+                kind:
+                  type: string
+                  enum: [pwd, company]
+                consentId:
+                  type: string
+                  description: Consent that covers this upload.
+                file:
+                  type: string
+                  contentMediaType: application/octet-stream
+                  description: PDF, JPEG or PNG, at most 2 MB.
+      responses:
+        '201':
+          description: Request queued for a verifier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationRequest'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+  /verification-requests/{requestId}/decision:
+    put:
+      tags: [Verification]
+      operationId: decideVerification
+      summary: Verifier approves or rejects; the uploaded file is deleted after the decision
+      description: Verification Module. Role verifier. Records the result in the Sensitive Store, deletes the file and writes an audit entry.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Decision'
+      responses:
+        '200':
+          description: Decision stored, file deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationRequest'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    firebaseIdToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase Authentication ID token, verified by Auth Guard with firebase-admin.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated UUID. A repeat with the same key and body replays the stored response for 24 h.
+      schema:
+        type: string
+        format: uuid
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+    ApplicationId:
+      name: applicationId
+      in: path
+      required: true
+      schema:
+        type: string
+    CompanyId:
+      name: companyId
+      in: path
+      required: true
+      schema:
+        type: string
+    ConsentId:
+      name: consentId
+      in: path
+      required: true
+      schema:
+        type: string
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    ValidationFailed:
+      description: Request body or parameters are invalid.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ValidationProblem'
+          example:
+            type: https://tamkeen.example/problems/validation-failed
+            title: Some fields need fixing
+            status: 400
+            detail: Skills must have at least one entry.
+            instance: /v1/profiles/me
+            errors:
+              - pointer: /skills
+                message: Add at least one skill.
+    Unauthorized:
+      description: Missing, expired or invalid ID token.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://tamkeen.example/problems/unauthenticated
+            title: Please sign in again
+            status: 401
+            detail: Your session has ended.
+    Forbidden:
+      description: Role or company does not allow this action (Access Policy).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://tamkeen.example/problems/forbidden-tenant
+            title: You cannot access this company's data
+            status: 403
+    NotFound:
+      description: Resource does not exist or is not visible to the caller.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    IdempotencyConflict:
+      description: The same Idempotency-Key was used with a different body, or the first request is still running.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://tamkeen.example/problems/idempotency-conflict
+            title: This request is already being processed
+            status: 409
+    InvalidTransition:
+      description: Status change not allowed from the current status.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PayloadTooLarge:
+      description: Uploaded file is larger than 2 MB.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    TooManyRequests:
+      description: Rate Limiter rejected the request.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ServiceUnavailable:
+      description: API is starting or a dependency is down.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Problem:
+      type: object
+      description: RFC 9457 problem details. `title` is short, plain language, safe to read aloud.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+        traceId:
+          type: string
+          description: Correlates with the Audit Module and server logs.
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                required: [pointer, message]
+                properties:
+                  pointer:
+                    type: string
+                    description: JSON Pointer to the bad field.
+                  message:
+                    type: string
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        version:
+          type: string
+    Role:
+      type: string
+      enum: [job_seeker, coach, hr, verifier, admin]
+    Preferences:
+      type: object
+      required: [language, textSize, theme, easyRead]
+      properties:
+        language:
+          type: string
+          enum: [ar, en]
+        textSize:
+          type: string
+          enum: [normal, large, x-large]
+        theme:
+          type: string
+          enum: [default, high-contrast, dark]
+        easyRead:
+          type: boolean
+    User:
+      type: object
+      required: [uid, role, preferences]
+      properties:
+        uid:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        companyId:
+          type: [string, 'null']
+        preferences:
+          $ref: '#/components/schemas/Preferences'
+    WorkNeed:
+      type: string
+      description: What helps the person work. Never a diagnosis (C-B4).
+      enum: [screen_reader_software, step_free_access, accessible_toilet, written_instructions, sign_language_interpreter, captioned_meetings, flexible_hours, remote_work, quiet_space, job_coach_support]
+    Accommodation:
+      $ref: '#/components/schemas/WorkNeed'
+    Profile:
+      type: object
+      required: [headline, skills, workNeeds, city]
+      properties:
+        headline:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+        skills:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        experience:
+          type: array
+          items:
+            type: object
+            required: [title, years]
+            properties:
+              title:
+                type: string
+              years:
+                type: number
+                minimum: 0
+        workNeeds:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkNeed'
+    ConsentRequest:
+      type: object
+      required: [purpose, accepted]
+      properties:
+        purpose:
+          type: string
+          enum: [pwd_verification, quota_counting]
+        accepted:
+          type: boolean
+          const: true
+    Consent:
+      type: object
+      required: [id, purpose, givenAt]
+      properties:
+        id:
+          type: string
+        purpose:
+          type: string
+          enum: [pwd_verification, quota_counting]
+        givenAt:
+          type: string
+          format: date-time
+        withdrawnAt:
+          type: [string, 'null']
+          format: date-time
+    JobInput:
+      type: object
+      required: [title, description, city, remote, accommodations, interviewFormats]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 5000
+        easyReadSummary:
+          type: string
+          maxLength: 600
+        city:
+          type: string
+        remote:
+          type: boolean
+        requiredSkills:
+          type: array
+          items:
+            type: string
+        accommodations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Accommodation'
+        interviewFormats:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [written, video_captioned, in_person, with_interpreter]
+    Job:
+      allOf:
+        - $ref: '#/components/schemas/JobInput'
+        - type: object
+          required: [id, companyId, companyName, status, postedAt]
+          properties:
+            id:
+              type: string
+            companyId:
+              type: string
+            companyName:
+              type: string
+            status:
+              type: string
+              enum: [open, closed]
+            postedAt:
+              type: string
+              format: date-time
+            match:
+              $ref: '#/components/schemas/Match'
+    Match:
+      type: object
+      description: Rule-based, explainable match (ADR-007). Only for job seekers.
+      required: [score, reasons]
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        reasons:
+          type: array
+          items:
+            type: string
+    JobPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Job'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    ApplicationStatus:
+      type: string
+      enum: [sent, viewed, interview, offer, hired, declined, withdrawn]
+    ApplicationInput:
+      type: object
+      required: [jobId, sharedNeeds]
+      properties:
+        jobId:
+          type: string
+        sharedNeeds:
+          type: array
+          description: Subset of the seeker's work needs they chose to share with this employer.
+          items:
+            $ref: '#/components/schemas/WorkNeed'
+        coverNote:
+          type: string
+          maxLength: 2000
+    Application:
+      type: object
+      required: [id, jobId, status, sharedNeeds, createdAt]
+      properties:
+        id:
+          type: string
+        jobId:
+          type: string
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        sharedNeeds:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkNeed'
+        createdAt:
+          type: string
+          format: date-time
+    EmployerApplicationView:
+      type: object
+      description: Employer projection. additionalProperties is false so contract tests fail if any extra field (e.g. disability status) leaks (QAS-3).
+      additionalProperties: false
+      required: [id, jobId, candidateName, skills, sharedNeeds, status]
+      properties:
+        id:
+          type: string
+        jobId:
+          type: string
+        candidateName:
+          type: string
+        headline:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        sharedNeeds:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkNeed'
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+    StatusChange:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [viewed, interview, offer, hired, declined]
+        note:
+          type: string
+          maxLength: 500
+    QuotaSnapshot:
+      type: object
+      required: [companyId, month, headcount, required, current, gap, percent, ruleVersion]
+      properties:
+        companyId:
+          type: string
+        month:
+          type: string
+          pattern: '^[0-9]{4}-[0-9]{2}$'
+        headcount:
+          type: integer
+          minimum: 0
+        required:
+          type: integer
+          minimum: 0
+        current:
+          type: integer
+          minimum: 0
+          description: Verified PwD employees.
+        gap:
+          type: integer
+          minimum: 0
+        percent:
+          type: number
+        ruleVersion:
+          type: integer
+    QuotaRuleInput:
+      type: object
+      required: [percent, minHeadcount, rounding, effectiveFrom]
+      properties:
+        percent:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 100
+        minHeadcount:
+          type: integer
+          minimum: 1
+        rounding:
+          type: string
+          enum: [up, down, nearest]
+        effectiveFrom:
+          type: string
+          format: date
+        legalReference:
+          type: string
+    QuotaRule:
+      allOf:
+        - $ref: '#/components/schemas/QuotaRuleInput'
+        - type: object
+          required: [version, createdBy]
+          properties:
+            version:
+              type: integer
+            createdBy:
+              type: string
+    VerificationRequest:
+      type: object
+      required: [id, kind, state, createdAt]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [pwd, company]
+        state:
+          type: string
+          enum: [pending, approved, rejected]
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Decision:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        reason:
+          type: string
+          maxLength: 500

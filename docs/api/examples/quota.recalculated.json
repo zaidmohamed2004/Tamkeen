@@ -1,0 +1,16 @@
+{
+  "id": "0b8f6c1e-4a5b-4c3d-9e2f-000000000005",
+  "type": "quota.recalculated",
+  "version": 1,
+  "occurredAt": "2026-11-25T10:00:00Z",
+  "producer": "Quota Module",
+  "traceId": "t-123",
+  "data": {
+    "companyId": "6740a001c9e77a0012aa0001",
+    "month": "2026-11",
+    "required": 6,
+    "current": 3,
+    "gap": 3,
+    "ruleVersion": 1
+  }
+}

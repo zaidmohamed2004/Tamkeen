@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zaidmohamed2004/Tamkeen/docs/api/events/quota.recalculated.schema.json",
+  "title": "quota.recalculated",
+  "description": "Quota snapshot changed. Consumer: Audit Module; later the Tamkeen platform via webhook.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "quota.recalculated"
+    },
+    "version": {
+      "const": 1
+    },
+    "producer": {
+      "const": "Quota Module"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "companyId",
+        "month",
+        "required",
+        "current",
+        "gap",
+        "ruleVersion"
+      ],
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "month": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}$"
+        },
+        "required": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "current": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gap": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ruleVersion": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

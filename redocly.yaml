@@ -1,0 +1,5 @@
+extends:
+  - recommended
+apis:
+  tamkeen:
+    root: docs/api/openapi.yaml

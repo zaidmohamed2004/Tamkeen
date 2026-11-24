@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zaidmohamed2004/Tamkeen/docs/api/events/consent.withdrawn.schema.json",
+  "title": "consent.withdrawn",
+  "description": "Consent withdrawn; sensitive data must be gone before purgeBefore (24 h). Consumers: Quota Module (recount), Audit Module.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "consent.withdrawn"
+    },
+    "version": {
+      "const": 1
+    },
+    "producer": {
+      "const": "Consent Module"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consentId",
+        "seekerUid",
+        "purpose",
+        "purgeBefore"
+      ],
+      "properties": {
+        "consentId": {
+          "type": "string"
+        },
+        "seekerUid": {
+          "type": "string"
+        },
+        "purpose": {
+          "enum": [
+            "pwd_verification",
+            "quota_counting"
+          ]
+        },
+        "purgeBefore": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

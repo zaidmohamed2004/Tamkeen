@@ -1,0 +1,14 @@
+{
+  "id": "0b8f6c1e-4a5b-4c3d-9e2f-000000000004",
+  "type": "consent.withdrawn",
+  "version": 1,
+  "occurredAt": "2026-11-25T10:00:00Z",
+  "producer": "Consent Module",
+  "traceId": "t-123",
+  "data": {
+    "consentId": "6740a2aac9e77a0012ac0003",
+    "seekerUid": "u_karim",
+    "purpose": "quota_counting",
+    "purgeBefore": "2026-11-26T10:00:00Z"
+  }
+}
