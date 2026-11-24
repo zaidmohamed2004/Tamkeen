@@ -1,10 +1,8 @@
 # Tamkeen
 
-Inclusive employment and 5% quota compliance platform.
+Tamkeen is our project for CSE4203 Principles of Software Architecture at AASTMT (Fall 2026). It's a job platform for people with disabilities in Egypt, with a quota dashboard for companies that have to meet the 5% hiring rule in Law 10/2018.
 
-**Team:** Success Enablers
-**Course:** CSE4203 Principles of Software Architecture, AASTMT (Fall 2026)
-**Instructor:** Dr. Nada Mahmoud Hassan · **TA:** Eng. Mohamed Fareh
+Team Success Enablers, supervised by Dr. Nada Mahmoud Hassan and Eng. Mohamed Fareh.
 
 | Member | Student ID |
 |---|---|
@@ -14,47 +12,104 @@ Inclusive employment and 5% quota compliance platform.
 | Youssef Sameh Elbendary | 231006239 |
 | Zaid Mohamed Abdelrahman | 231006511 |
 
-## What is Tamkeen?
+## The idea
 
-Egypt's Law No. 10 of 2018 says any company with 20 or more employees has to give at least 5% of its jobs to persons with disabilities (PwDs). Many companies don't, or they hire people "on paper" and pay them to stay home. On the other side, most job sites don't work well with a screen reader, and a lot of forms ask for a diagnosis.
+By law, any company in Egypt with 20 or more employees has to give at least 5% of its jobs to persons with disabilities. A lot of companies get around it with "paper jobs", where someone is paid to stay home just so the number looks right. And on the other side, most job sites don't work properly with a screen reader, and plenty of them ask people for a diagnosis.
 
-Tamkeen is a job platform for PwDs in Arabic and English. Job seekers list their skills and what they need to work well (a screen reader, step-free access, written instructions). We never ask for a diagnosis. Companies post jobs and say which accommodations they offer, and the platform matches the two. When a company hires a verified PwD, its quota dashboard updates: a company of 120 employees needs 6, so with 2 verified the dashboard shows a gap of 4.
+So we're building something for both sides. Job seekers make a profile around their skills and what helps them work (a screen reader, step-free access, written instructions), and we never ask for a diagnosis. Companies post jobs and list the accommodations they offer, and Tamkeen matches the two. When a company hires a verified person through the platform, its dashboard updates. For example, a company with 120 employees needs 6, so if it has 2 the dashboard shows a gap of 4.
 
-The features are simple. What makes the architecture interesting is the trade-offs: security against usability (no CAPTCHAs or short time-outs for screen-reader users), privacy of disability data under Law 151/2020, and availability on free hosting that sleeps when idle.
+The features themselves are simple. The interesting part (and the reason it works for this course) is the trade-offs: keeping the site secure without CAPTCHAs that block screen-reader users, protecting disability data under Law 151/2020, and staying reliable on free hosting that goes to sleep when nobody's using it.
 
 ## Milestones
 
-| Milestone | What it covers | Status |
+| Milestone | What it is | Status |
 |---|---|---|
-| M1 | Proposal and architectural requirements | Submitted 23 Oct 2026 ([PDF](successEnablers_tamkeen.pdf)) |
-| M2 | Software Architecture Document | Submitted 27 Nov 2026 ([PDF](docs/M2/successEnablers_tamkeen.pdf)) |
-| M3 | Architectural prototype | Upcoming |
-| M4 | Architecture evaluation and final presentation | Upcoming |
+| M1 | Proposal and architectural requirements | Submitted 23 Oct 2026 |
+| M2 | Software Architecture Document | Submitted 27 Nov 2026 |
+| M3 | Architectural prototype | In progress |
+| M4 | Architecture evaluation and final presentation | Coming up |
 
-## Repository structure
+The documents:
+
+- [M1](docs/M1/successEnablers_tamkeen.pdf) (cleaned-up layout, same content as what we handed in)
+- [M2](docs/M2/successEnablers_tamkeen.pdf)
+- [M1 and M2 in one file](docs/successEnablers_tamkeen_M1_M2.pdf), if you want to read both together
+- The PDF in the root folder is M1 exactly as we submitted it on 23 October.
+
+## What's where
 
 ```
 .
-├── README.md
-├── successEnablers_tamkeen.pdf        # M1: proposal and architectural requirements
-├── diagrams/                          # M1 diagram sources (context, utility tree)
-├── docs/
-│   ├── M2/successEnablers_tamkeen.pdf # M2: Software Architecture Document (submitted version)
-│   ├── M2/successEnablers_tamkeen_full.pdf # same, plus requirements checklist and verification notes
-│   ├── elements.yaml                  # one list of element names used in every view
-│   ├── diagrams/                      # M2 views (C4 L2, C4 L3, sequences, deployment, data)
-│   ├── adr/                           # ADR-001 to ADR-007
-│   ├── api/                           # openapi.yaml, event schemas, example events
-│   ├── traceability/                  # QAS -> elements -> tactics -> ADRs -> M3 tests, plus a check script
-│   └── tools/                         # small scripts for the checks
-└── .github/workflows/docs-checks.yml  # runs the checks on every push to docs/
+├── successEnablers_tamkeen.pdf          M1 as submitted
+├── diagrams/                            M1 diagram sources
+└── docs/
+    ├── M1/, M2/                         milestone PDFs
+    ├── successEnablers_tamkeen_M1_M2.pdf  both milestones in one file
+    ├── elements.yaml                    the names we use for every box in every diagram
+    ├── diagrams/                        M2 diagrams (Mermaid)
+    ├── adr/                             our 7 architecture decisions
+    ├── api/                             OpenAPI spec, event schemas and example events
+    ├── traceability/                    the QAS-to-design matrix and a script that checks it
+    └── tools/                           small helper scripts
 ```
 
-## Milestone 2 at a glance
+## The architecture in short
 
-We went with a React web app talking to one Node.js + Express API built as a modular monolith. Each module owns its own MongoDB collections, and disability data sits in a separate encrypted database that only the Consent Module can open. The full reasoning, the style comparison and all the views are in the [M2 PDF](docs/M2/successEnablers_tamkeen.pdf).
+A React web app talks to one Node.js + Express API. The API is a modular monolith: one thing to deploy, but split into modules that each own their own MongoDB collections. Disability data lives in a separate, encrypted database, and only the Consent Module can open it. Here's the container view from M2:
 
-To re-run the checks locally (from the repo root):
+```mermaid
+%% Figure 1. C4 Level 2: containers of Tamkeen
+flowchart TB
+  seeker["<b>Job Seeker</b><br/>[Person]<br/>visual, hearing, mobility or<br/>cognitive disability"]
+  coach["<b>Job Coach</b><br/>[Person, optional]"]
+  hr["<b>Employer HR</b><br/>[Person]"]
+  verifier["<b>Verifier</b><br/>[Person, admin]"]
+  mobile["<b>Tamkeen Mobile App</b><br/>[External system]<br/>Flutter, other Tamkeen pillars"]
+  subgraph boundary["Tamkeen system boundary"]
+    web["<b>Web App</b><br/>[Container: React + Vite SPA]<br/>Arabic and English, RTL, easy-read mode,<br/>Draft Store in the browser"]
+    api["<b>Tamkeen API</b><br/>[Container: Node.js 22 LTS + Express 5]<br/>modular monolith, REST /v1"]
+    db[("<b>Main Database</b><br/>[Container: MongoDB 8, Atlas Free]<br/>database tamkeen")]
+    vault[("<b>Sensitive Store</b><br/>[Container: MongoDB 8, Atlas Free]<br/>database tamkeen_vault,<br/>AES-256-GCM encrypted fields")]
+  end
+  idp["<b>Firebase Authentication</b><br/>[External system]<br/>shared Tamkeen sign-in"]
+  mail["<b>Brevo Email API</b><br/>[External system]<br/>transactional email"]
+  mon["<b>Uptime Monitor</b><br/>[External system]<br/>free tier"]
+  seeker -->|"uses, HTTPS"| web
+  coach -.->|"helps, with permission, HTTPS"| web
+  hr -->|"posts jobs, tracks quota, HTTPS"| web
+  verifier -->|"verifies, HTTPS"| web
+  web -->|"signs in, HTTPS (Firebase SDK)"| idp
+  web -->|"REST/JSON over HTTPS<br/>Bearer ID token"| api
+  mobile -->|"REST/JSON over HTTPS<br/>Bearer ID token"| api
+  api -->|"verifies ID tokens, HTTPS"| idp
+  api -->|"reads/writes, MongoDB wire<br/>protocol over TLS"| db
+  api -->|"Consent Module only, separate<br/>DB user, TLS"| vault
+  api -->|"sends email, HTTPS POST<br/>/v3/smtp/email"| mail
+  mon -->|"GET /health every 5 min, HTTPS"| api
+  subgraph legend["Legend"]
+    direction LR
+    lp["Person"]:::person
+    lc["Container we build"]:::container
+    ld[("Data store we build")]:::container
+    le["External system"]:::external
+    ln["solid arrow = sync call, label = purpose + protocol<br/>dashed arrow = optional (Could priority)"]:::note
+  end
+  classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+  classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+  classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+  classDef note fill:#ffffff,stroke:#bbbbbb,color:#333333
+  class seeker,coach,hr,verifier person
+  class web,api,db,vault container
+  class idp,mail,mon,mobile external
+  style boundary fill:none,stroke:#438dd5,stroke-dasharray:6 4
+  style legend fill:#fafafa,stroke:#cccccc
+```
+
+The reasoning behind each choice is in [docs/adr](docs/adr), and the full write-up is in the M2 PDF.
+
+## Running the checks
+
+We have a few checks for the docs: linting the API spec, validating the example events, and making sure every quality scenario traces to a design decision. GitHub runs them on every push to `docs/`. To run them yourself from the repo root:
 
 ```
 npm install --prefix docs/tools
@@ -63,68 +118,6 @@ NODE_PATH=docs/tools/node_modules node docs/tools/validate-events.js
 python3 docs/traceability/check_traceability.py
 ```
 
-## Diagrams
+## Tech stack
 
-The diagram sources are Mermaid files. GitHub renders the copies below, and you can also open any `.mmd` file in [mermaid.live](https://mermaid.live) to view or edit it.
-
-### Figure 1: System context (C4 Level 1)
-
-Dark blue boxes are people, the blue box is our system, and grey boxes are external systems. Dashed arrows are optional (Could priority).
-
-```mermaid
-flowchart LR
-  seeker["<b>Job seeker with disability</b><br/>[Person]<br/>visual, hearing, mobility, cognitive"]
-  coach["<b>Job coach / family helper</b><br/>[Person, optional]"]
-  hr["<b>Employer HR</b><br/>[Person]"]
-  admin["<b>Admin / verifier</b><br/>[Person]"]
-  sys["<b>Tamkeen</b><br/>[Software system]<br/>Inclusive employment and<br/>5% quota compliance platform"]
-  idp["<b>Firebase Authentication</b><br/>[External system]<br/>identity provider"]
-  mail["<b>Brevo email service</b><br/>[External system]"]
-  app["<b>Tamkeen mobile app</b><br/>[External system]<br/>other accessibility pillars"]
-  seeker -->|builds profile, searches, applies<br/>HTTPS| sys
-  coach -.->|helps, with permission<br/>HTTPS| sys
-  hr -->|posts jobs, reviews candidates,<br/>tracks quota - HTTPS| sys
-  admin -->|verifies companies<br/>and PwD status - HTTPS| sys
-  sys -->|verifies ID tokens<br/>HTTPS| idp
-  sys -->|sends status emails<br/>SMTP| mail
-  app -->|reads jobs and profiles<br/>REST/JSON over HTTPS| sys
-  classDef person fill:#08427b,stroke:#052e56,color:#ffffff
-  classDef system fill:#1168bd,stroke:#0b4884,color:#ffffff
-  classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
-  class seeker,coach,hr,admin person
-  class sys system
-  class idp,mail,app external
-```
-
-### Figure 2: Utility tree
-
-Each scenario is rated (Importance, Difficulty) with H, M or L. Full six-part scenarios are in section 5 of the M1 PDF.
-
-```mermaid
-flowchart LR
-  U(("<b>Utility</b><br/>Tamkeen"))
-  U --> US[Usability]
-  U --> SE[Security]
-  U --> AV[Availability]
-  U --> PE[Performance]
-  U --> MO[Modifiability]
-  U --> IO[Interoperability]
-  US --> u1["QAS-1: Blind user applies with screen reader and keyboard; 0 serious axe errors, ≤ 15 min<br/><b>H, H</b>"]
-  US --> u2["QAS-2: Easy-read user applies in ≤ 6 screens, ≤ 10 min<br/><b>H, M</b>"]
-  SE --> s1["QAS-3: Employer views never return disability data; 100% of contract tests pass<br/><b>H, H</b>"]
-  SE --> s2["QAS-4: Cross-company requests 100% denied and logged within 1 s<br/><b>H, M</b>"]
-  AV --> a1["QAS-5: Server asleep: 0 applications lost, submit completes ≤ 90 s after wake<br/><b>M, H</b>"]
-  PE --> p1["QAS-6: 95% of job searches < 1.5 s with 100 concurrent users<br/><b>M, M</b>"]
-  MO --> m1["QAS-7: Quota rule change in ≤ 10 min, 0 code changes, 0 redeploys<br/><b>M, M</b>"]
-  IO --> i1["QAS-8: Mobile app requests 100% correctly processed; invalid tokens 100% rejected and logged<br/><b>H, H</b>"]
-  classDef root fill:#1168bd,stroke:#0b4884,color:#ffffff
-  classDef qa fill:#dbe8f6,stroke:#1168bd,color:#0b2540
-  classDef leaf fill:#ffffff,stroke:#8a8a8a,color:#1a1a1a
-  class U root
-  class US,SE,AV,PE,MO,IO qa
-  class u1,u2,s1,s2,a1,p1,m1,i1 leaf
-```
-
-## Tech stack (planned)
-
-MERN (MongoDB, Express, React, Node.js), Firebase Authentication for sign-in shared with the wider Tamkeen platform, and the Brevo email API. Everything runs on free tiers: Vercel for the web app, Render for the API and MongoDB Atlas for the database.
+MongoDB, Express, React and Node.js, with Firebase for sign-in (shared with the rest of the Tamkeen graduation project) and Brevo for email. Everything runs on free tiers: Vercel for the web app, Render for the API, MongoDB Atlas for the database.
