@@ -1,0 +1,33 @@
+%% Figure 3. Dynamic view SD-1: a job seeker applies (FR-07, QAS-3)
+sequenceDiagram
+  autonumber
+  actor S as Job Seeker
+  participant W as Web App (Draft Store, API Client)
+  participant F as Firebase Authentication
+  participant G as Tamkeen API: Rate Limiter, Auth Guard, Access Policy
+  participant I as Idempotency Filter
+  participant A as Applications Module
+  participant P as Profiles Module
+  participant D as Main Database
+  participant B as Event Bus
+  Note over S,B: Legend: solid arrow = request or call, dashed arrow = reply, Note = component behaviour
+  S->>W: Presses "Send application" (chose which work needs to share)
+  W->>W: Draft Store saves the form + Idempotency-Key K (UUID)
+  W->>F: getIdToken()
+  F-->>W: ID token (short-lived)
+  W->>G: POST /v1/applications, Bearer token, Idempotency-Key: K
+  G->>G: verify token, role = job_seeker, rate limit ok
+  G->>I: forward request
+  I->>D: reserve key K (unique index)
+  D-->>I: new key
+  I->>A: submit(jobId, sharedNeeds)
+  A->>P: getSharedNeeds(uid, selected ids)
+  P-->>A: work needs only (never disability status)
+  A->>D: transaction: insert application + outbox event application.submitted
+  D-->>A: committed
+  A->>B: publish application.submitted
+  A-->>I: 201 Created, application summary
+  I->>D: store response for K (24 h)
+  I-->>W: 201 Created
+  W->>W: Draft Store clears K
+  W-->>S: aria-live: "Application sent"

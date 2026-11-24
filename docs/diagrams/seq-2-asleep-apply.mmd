@@ -1,0 +1,39 @@
+%% Figure 4. Dynamic view SD-2 (QAS-5): the API is asleep or restarting while a job seeker applies
+sequenceDiagram
+  autonumber
+  actor S as Job Seeker
+  participant W as Web App (Draft Store, API Client)
+  participant R as Render free host
+  participant T as Tamkeen API
+  participant I as Idempotency Filter
+  participant D as Main Database
+  Note over S,D: Legend: solid arrow = request, dashed arrow = reply, X arrow = failed call, rect = retry loop
+  S->>W: Presses "Send application"
+  W->>W: Draft Store saves form + Idempotency-Key K
+  W-xR: POST /v1/applications (K)
+  Note over R,T: Service was idle more than 15 min, spin-up takes about 1 min
+  W->>W: API Client timeout after 10 s (or 502/503)
+  W-->>S: aria-live: "Connecting. Your answers are saved."
+  R->>T: start instance
+  rect rgb(235, 242, 250)
+    loop every 2, 4, 8, 16, 30, 30 s (max 120 s)
+      W->>R: GET /health
+      R-->>W: 503 or no answer until the API is up
+    end
+  end
+  R->>T: instance ready
+  W->>T: GET /health
+  T-->>W: 200 OK
+  W->>I: POST /v1/applications again, same Idempotency-Key K
+  alt K not seen (first POST never reached the API)
+    I->>D: reserve K, then normal apply (see SD-1)
+    I-->>W: 201 Created
+  else K already completed (first POST was processed before the timeout)
+    I->>D: read stored response for K
+    I-->>W: 201 Created (replayed, no second application)
+  end
+  W->>W: Draft Store clears K
+  W-->>S: aria-live: "Application sent"
+  opt API still down after 120 s
+    W-->>S: "We could not reach the server. Your application is saved on this device."
+  end

@@ -1,0 +1,45 @@
+%% Figure 1. C4 Level 2: containers of Tamkeen
+flowchart TB
+  seeker["<b>Job Seeker</b><br/>[Person]<br/>visual, hearing, mobility or<br/>cognitive disability"]
+  coach["<b>Job Coach</b><br/>[Person, optional]"]
+  hr["<b>Employer HR</b><br/>[Person]"]
+  verifier["<b>Verifier</b><br/>[Person, admin]"]
+  mobile["<b>Tamkeen Mobile App</b><br/>[External system]<br/>Flutter, other Tamkeen pillars"]
+  subgraph boundary["Tamkeen system boundary"]
+    web["<b>Web App</b><br/>[Container: React + Vite SPA]<br/>Arabic and English, RTL, easy-read mode,<br/>Draft Store in the browser"]
+    api["<b>Tamkeen API</b><br/>[Container: Node.js 22 LTS + Express 5]<br/>modular monolith, REST /v1"]
+    db[("<b>Main Database</b><br/>[Container: MongoDB 8, Atlas Free]<br/>database tamkeen")]
+    vault[("<b>Sensitive Store</b><br/>[Container: MongoDB 8, Atlas Free]<br/>database tamkeen_vault,<br/>AES-256-GCM encrypted fields")]
+  end
+  idp["<b>Firebase Authentication</b><br/>[External system]<br/>shared Tamkeen sign-in"]
+  mail["<b>Brevo Email API</b><br/>[External system]<br/>transactional email"]
+  mon["<b>Uptime Monitor</b><br/>[External system]<br/>free tier"]
+  seeker -->|"uses, HTTPS"| web
+  coach -.->|"helps, with permission, HTTPS"| web
+  hr -->|"posts jobs, tracks quota, HTTPS"| web
+  verifier -->|"verifies, HTTPS"| web
+  web -->|"signs in, HTTPS (Firebase SDK)"| idp
+  web -->|"REST/JSON over HTTPS<br/>Bearer ID token"| api
+  mobile -->|"REST/JSON over HTTPS<br/>Bearer ID token"| api
+  api -->|"verifies ID tokens, HTTPS"| idp
+  api -->|"reads/writes, MongoDB wire<br/>protocol over TLS"| db
+  api -->|"Consent Module only, separate<br/>DB user, TLS"| vault
+  api -->|"sends email, HTTPS POST<br/>/v3/smtp/email"| mail
+  mon -->|"GET /health every 5 min, HTTPS"| api
+  subgraph legend["Legend"]
+    direction LR
+    lp["Person"]:::person
+    lc["Container we build"]:::container
+    ld[("Data store we build")]:::container
+    le["External system"]:::external
+    ln["solid arrow = sync call, label = purpose + protocol<br/>dashed arrow = optional (Could priority)"]:::note
+  end
+  classDef person fill:#08427b,stroke:#052e56,color:#ffffff
+  classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+  classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+  classDef note fill:#ffffff,stroke:#bbbbbb,color:#333333
+  class seeker,coach,hr,verifier person
+  class web,api,db,vault container
+  class idp,mail,mon,mobile external
+  style boundary fill:none,stroke:#438dd5,stroke-dasharray:6 4
+  style legend fill:#fafafa,stroke:#cccccc

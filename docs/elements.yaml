@@ -1,0 +1,38 @@
+# Single element vocabulary for every M2 view. Names must appear exactly like this in diagrams and tables.
+people:
+  - Job Seeker
+  - Job Coach
+  - Employer HR
+  - Verifier
+containers:
+  - Web App
+  - Tamkeen API
+  - Main Database
+  - Sensitive Store
+external_systems:
+  - Firebase Authentication
+  - Brevo Email API
+  - Tamkeen Mobile App
+  - Uptime Monitor
+web_components:
+  - Draft Store
+  - API Client
+api_components:
+  - Rate Limiter
+  - Auth Guard
+  - Access Policy
+  - Idempotency Filter
+  - Problem Handler
+  - Accounts Module
+  - Profiles Module
+  - Companies Module
+  - Jobs Module
+  - Search Cache
+  - Matching Module
+  - Applications Module
+  - Quota Module
+  - Verification Module
+  - Consent Module
+  - Notifications Module
+  - Audit Module
+  - Event Bus

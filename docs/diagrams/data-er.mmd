@@ -1,0 +1,89 @@
+%% Figure 8. Data view: main entities (Main Database and Sensitive Store)
+erDiagram
+  USERS ||--o| PROFILES : "has (job seeker)"
+  USERS ||--o{ COMPANY_MEMBERS : "belongs to (HR)"
+  COMPANIES ||--o{ COMPANY_MEMBERS : has
+  COMPANIES ||--o{ JOBS : posts
+  JOBS ||--o{ APPLICATIONS : receives
+  PROFILES ||--o{ APPLICATIONS : sends
+  APPLICATIONS ||--o| EMPLOYMENTS : "becomes, when hired"
+  COMPANIES ||--o{ EMPLOYMENTS : employs
+  COMPANIES ||--o{ QUOTA_SNAPSHOTS : "monthly result"
+  QUOTA_RULES ||--o{ QUOTA_SNAPSHOTS : "computed with"
+  USERS ||--o{ VERIFICATION_REQUESTS : submits
+  USERS ||--o{ CONSENTS : gives
+  USERS ||--o| SENSITIVE_RECORDS : "has (vault)"
+  CONSENTS ||--o{ SENSITIVE_RECORDS : "authorises"
+  VERIFICATION_REQUESTS ||--o| CARD_FILES : "uploads (deleted after decision)"
+  USERS {
+    string uid PK "Firebase uid"
+    string role "job_seeker | coach | hr | verifier | admin"
+    object preferences "language, textSize, theme, easyRead"
+  }
+  PROFILES {
+    string uid PK
+    array skills
+    array workNeeds "e.g. screen_reader, step_free_access"
+  }
+  COMPANIES {
+    objectId id PK
+    string commercialRegNo
+    int headcount
+    bool verified
+  }
+  JOBS {
+    objectId id PK
+    objectId companyId FK
+    array accommodations
+    string status
+  }
+  APPLICATIONS {
+    objectId id PK
+    objectId jobId FK
+    string uid FK
+    array sharedNeeds "subset the seeker chose"
+    string status
+  }
+  EMPLOYMENTS {
+    objectId id PK
+    objectId companyId FK
+    string uid FK
+    date start
+  }
+  QUOTA_RULES {
+    int version PK
+    number percent
+    int minHeadcount
+    string rounding
+    date effectiveFrom
+  }
+  QUOTA_SNAPSHOTS {
+    objectId companyId FK
+    string month
+    int required
+    int current
+    int gap
+  }
+  CONSENTS {
+    objectId id PK
+    string uid FK
+    string purpose
+    date givenAt
+    date withdrawnAt
+  }
+  SENSITIVE_RECORDS {
+    string uid PK
+    binary statusCipher "AES-256-GCM"
+    bool verifiedPwd
+    date purgeAfter
+  }
+  VERIFICATION_REQUESTS {
+    objectId id PK
+    string uid FK
+    string kind "company | pwd"
+    string decision
+  }
+  CARD_FILES {
+    objectId id PK
+    binary chunks "GridFS, max 2 MB"
+  }

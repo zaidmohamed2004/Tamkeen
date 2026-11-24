@@ -1,0 +1,37 @@
+%% Figure 5. Dynamic view SD-3: a verified PwD is hired and the quota updates (FR-08, QAS-4, QAS-7)
+sequenceDiagram
+  autonumber
+  actor H as Employer HR
+  participant W as Web App
+  participant G as Tamkeen API: Auth Guard, Access Policy
+  participant A as Applications Module
+  participant B as Event Bus
+  participant Q as Quota Module
+  participant C as Consent Module
+  participant N as Notifications Module
+  participant D as Main Database
+  participant E as Brevo Email API
+  Note over H,E: Legend: solid arrow = call or event, dashed arrow = reply, alt = branches
+  H->>W: Marks applicant as "Hired"
+  W->>G: PATCH /v1/applications/{id}/status {status: hired}
+  alt HR's companyId differs from the job's companyId
+    G-->>W: 403 problem+json (type .../forbidden-tenant), Audit Module logs attempt
+  else same company
+    G->>A: changeStatus(id, hired)
+    A->>D: transaction: update application + outbox events application.status_changed, employee.hired
+    A-->>W: 200 OK
+    A->>B: publish employee.hired (after commit)
+    B->>Q: employee.hired(companyId, uid)
+    Q->>C: isVerifiedPwd(uid)
+    C-->>Q: true (boolean only, no disability details)
+    Q->>D: insert employment, load quota rule version in force
+    Q->>D: save quota snapshot (required, current, gap)
+    B->>N: application.status_changed
+    N->>D: read pending outbox rows
+    N->>E: POST /v3/smtp/email (api-key)
+    alt Brevo replies 2xx
+      N->>D: mark outbox row sent
+    else error or timeout
+      N->>D: attempts + 1, retry later with backoff (max 8)
+    end
+  end

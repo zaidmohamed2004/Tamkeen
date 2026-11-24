@@ -1,0 +1,57 @@
+%% Figure 6. Deployment view: production demo environment (free tiers)
+flowchart LR
+  subgraph dev["User device"]
+    br["<b>Browser</b> + screen reader<br/>runs <b>Web App</b><br/><b>Draft Store</b> in IndexedDB"]
+  end
+  subgraph vercel["Vercel Hobby (global CDN)"]
+    webs["<b>Web App</b><br/>static React bundle"]
+  end
+  subgraph render["Render Free web service, Frankfurt region"]
+    apic["<b>Tamkeen API</b><br/>Node.js 22, 1 instance,<br/>sleeps after 15 min idle"]
+  end
+  subgraph atlas["MongoDB Atlas Free cluster, 3-node replica set"]
+    dbn[("<b>Main Database</b><br/>tamkeen")]
+    vn[("<b>Sensitive Store</b><br/>tamkeen_vault")]
+  end
+  subgraph google["Google Firebase (Spark plan)"]
+    idpn["<b>Firebase Authentication</b>"]
+  end
+  subgraph brevo["Brevo Free plan"]
+    mailn["<b>Brevo Email API</b>"]
+  end
+  subgraph gh["GitHub"]
+    ci["Repository + Actions CI<br/>lint, tests, axe, OpenAPI lint"]
+  end
+  monn["<b>Uptime Monitor</b><br/>free tier"]
+  mob["<b>Tamkeen Mobile App</b><br/>Android / iOS"]
+  br -->|"HTTPS, loads bundle"| webs
+  br -->|"HTTPS REST /v1"| apic
+  br -->|"HTTPS sign-in"| idpn
+  mob -->|"HTTPS REST /v1"| apic
+  apic -->|"TLS, MongoDB wire"| dbn
+  apic -->|"TLS, separate DB user"| vn
+  apic -->|"HTTPS"| idpn
+  apic -->|"HTTPS"| mailn
+  monn -->|"GET /health every 5 min"| apic
+  ci -->|"deploy on push to main"| webs
+  ci -->|"deploy hook on push to main"| apic
+  subgraph legend["Legend"]
+    direction LR
+    lnode["dashed box = infrastructure node / environment"]:::note
+    lc["Container we deploy"]:::container
+    le["External system"]:::external
+    ln2["arrow = network link, label = protocol"]:::note
+  end
+  classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+  classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+  classDef note fill:#ffffff,stroke:#bbbbbb,color:#333333
+  class br,webs,apic,dbn,vn container
+  class idpn,mailn,monn,mob,ci external
+  style dev fill:none,stroke:#666,stroke-dasharray:6 4
+  style vercel fill:none,stroke:#666,stroke-dasharray:6 4
+  style render fill:none,stroke:#666,stroke-dasharray:6 4
+  style atlas fill:none,stroke:#666,stroke-dasharray:6 4
+  style google fill:none,stroke:#666,stroke-dasharray:6 4
+  style brevo fill:none,stroke:#666,stroke-dasharray:6 4
+  style gh fill:none,stroke:#666,stroke-dasharray:6 4
+  style legend fill:#fafafa,stroke:#cccccc

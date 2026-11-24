@@ -1,0 +1,76 @@
+%% Figure 2. C4 Level 3: components of the Tamkeen API container
+flowchart TB
+  web["<b>Web App</b><br/>[Container]"]
+  mobile["<b>Tamkeen Mobile App</b><br/>[External system]"]
+  subgraph apib["Tamkeen API [Container: Node.js 22 LTS + Express 5]"]
+    subgraph pipe["Request pipeline (every request, in this order)"]
+      rl["<b>Rate Limiter</b><br/>per IP and per user"]
+      ag["<b>Auth Guard</b><br/>verifies Firebase ID token"]
+      ap["<b>Access Policy</b><br/>role + company scoping,<br/>deny by default"]
+      idf["<b>Idempotency Filter</b><br/>Idempotency-Key on POST"]
+      rl --> ag --> ap --> idf
+    end
+    subgraph mods["Business modules (each owns its collections)"]
+      acc["<b>Accounts Module</b><br/>users, roles, preferences"]
+      prof["<b>Profiles Module</b><br/>skills, work needs"]
+      comp["<b>Companies Module</b><br/>company, headcount, members"]
+      jobs["<b>Jobs Module</b><br/>postings, accommodations"]
+      match["<b>Matching Module</b><br/>rule-based score + reasons"]
+      appl["<b>Applications Module</b><br/>apply, status, shared needs"]
+      quota["<b>Quota Module</b><br/>rules, employments, snapshots"]
+      verif["<b>Verification Module</b><br/>company + PwD checks"]
+      cons["<b>Consent Module</b><br/>only door to Sensitive Store"]
+    end
+    subgraph shared["Shared components"]
+      bus["<b>Event Bus</b><br/>in-process publish-subscribe"]
+      cache["<b>Search Cache</b><br/>in-memory, 60 s TTL"]
+      notif["<b>Notifications Module</b><br/>outbox dispatcher"]
+      audit["<b>Audit Module</b><br/>append-only log"]
+      ph["<b>Problem Handler</b><br/>RFC 9457 problem+json"]
+    end
+  end
+  db[("<b>Main Database</b>")]
+  vault[("<b>Sensitive Store</b>")]
+  idp["<b>Firebase Authentication</b>"]
+  mail["<b>Brevo Email API</b>"]
+  web -->|"HTTPS REST /v1"| rl
+  mobile -->|"HTTPS REST /v1"| rl
+  ag -->|"public keys, HTTPS"| idp
+  idf -->|"routes to"| acc
+  idf -->|"routes to"| appl
+  idf -->|"routes to"| quota
+  jobs -->|"read-through"| cache
+  match -->|"calls"| prof
+  match -->|"calls"| jobs
+  appl -->|"calls"| jobs
+  appl -->|"shared needs subset"| prof
+  verif -->|"stores card, records result"| cons
+  quota -->|"isVerifiedPwd(uid): boolean"| cons
+  appl -->|"publishes events"| bus
+  bus -->|"employee.hired"| quota
+  bus -->|"all events"| notif
+  bus -->|"all events"| audit
+  acc -->|"Mongoose, TLS"| db
+  appl -->|"Mongoose, TLS"| db
+  quota -->|"Mongoose, TLS"| db
+  cons -->|"separate DB user, TLS"| vault
+  notif -->|"HTTPS api-key"| mail
+  subgraph legend["Legend"]
+    direction LR
+    lcomp["Component inside the API"]:::component
+    lcont["Container"]:::container
+    lext["External system"]:::external
+    ln["arrow = in-process call or event inside the API,<br/>or network call with protocol across the boundary.<br/>Routing and database arrows are drawn for three<br/>modules only; every module routes and stores the same way.<br/>Problem Handler catches errors from every component."]:::note
+  end
+  classDef component fill:#85bbf0,stroke:#5d82a8,color:#000000
+  classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+  classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+  classDef note fill:#ffffff,stroke:#bbbbbb,color:#333333
+  class rl,ag,ap,idf,acc,prof,comp,jobs,match,appl,quota,verif,cons,bus,cache,notif,audit,ph component
+  class web,db,vault container
+  class mobile,idp,mail external
+  style apib fill:none,stroke:#438dd5,stroke-dasharray:6 4
+  style legend fill:#fafafa,stroke:#cccccc
+  style pipe fill:#f4f8fc,stroke:#9bb8d6
+  style mods fill:#f4f8fc,stroke:#9bb8d6
+  style shared fill:#f4f8fc,stroke:#9bb8d6

@@ -1,0 +1,25 @@
+%% Figure 7. Deployment view: local development and M3 demo (docker compose up)
+flowchart LR
+  subgraph laptop["Developer laptop: docker compose"]
+    webd["<b>Web App</b><br/>Vite dev server :5173"]
+    apid["<b>Tamkeen API</b><br/>node:22 container :8080"]
+    mongod[("<b>Main Database</b> + <b>Sensitive Store</b><br/>mongo:8 replica set rs0 :27017")]
+    emu["<b>Firebase Authentication</b><br/>Auth emulator :9099"]
+    mailpit["Mail catcher (Mailpit) :8025<br/>stands in for <b>Brevo Email API</b>"]
+  end
+  webd -->|"HTTP REST /v1"| apid
+  webd -->|"HTTP sign-in"| emu
+  apid -->|"MongoDB wire"| mongod
+  apid -->|"verify tokens"| emu
+  apid -->|"HTTP, same adapter interface"| mailpit
+  subgraph legend["Legend"]
+    direction LR
+    lc["Container we build"]:::container
+    le["Stand-in for an external system"]:::external
+  end
+  classDef container fill:#438dd5,stroke:#2e6295,color:#ffffff
+  classDef external fill:#8a8a8a,stroke:#6b6b6b,color:#ffffff
+  class webd,apid,mongod container
+  class emu,mailpit external
+  style laptop fill:none,stroke:#666,stroke-dasharray:6 4
+  style legend fill:#fafafa,stroke:#cccccc
