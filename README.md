@@ -39,7 +39,8 @@ The features are simple. What makes the architecture interesting is the trade-of
 ├── successEnablers_tamkeen.pdf        # M1: proposal and architectural requirements
 ├── diagrams/                          # M1 diagram sources (context, utility tree)
 ├── docs/
-│   ├── M2/successEnablers_tamkeen.pdf # M2: Software Architecture Document
+│   ├── M2/successEnablers_tamkeen.pdf # M2: Software Architecture Document (submitted version)
+│   ├── M2/successEnablers_tamkeen_full.pdf # same, plus requirements checklist and verification notes
 │   ├── elements.yaml                  # one list of element names used in every view
 │   ├── diagrams/                      # M2 views (C4 L2, C4 L3, sequences, deployment, data)
 │   ├── adr/                           # ADR-001 to ADR-007
