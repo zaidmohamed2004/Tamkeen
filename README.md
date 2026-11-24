@@ -26,8 +26,8 @@ The features are simple. What makes the architecture interesting is the trade-of
 
 | Milestone | What it covers | Status |
 |---|---|---|
-| M1 | Proposal and architectural requirements | Submitted 23 Oct 2026 |
-| M2 | Software Architecture Document | Upcoming |
+| M1 | Proposal and architectural requirements | Submitted 23 Oct 2026 ([PDF](successEnablers_tamkeen.pdf)) |
+| M2 | Software Architecture Document | Submitted 27 Nov 2026 ([PDF](docs/M2/successEnablers_tamkeen.pdf)) |
 | M3 | Architectural prototype | Upcoming |
 | M4 | Architecture evaluation and final presentation | Upcoming |
 
@@ -36,10 +36,30 @@ The features are simple. What makes the architecture interesting is the trade-of
 ```
 .
 ├── README.md
-├── successEnablers_tamkeen.pdf     # Milestone 1 document
-└── diagrams/
-    ├── context.mmd                 # Figure 1: C4 Level 1 system context
-    └── utility-tree.mmd            # Figure 2: utility tree
+├── successEnablers_tamkeen.pdf        # M1: proposal and architectural requirements
+├── diagrams/                          # M1 diagram sources (context, utility tree)
+├── docs/
+│   ├── M2/successEnablers_tamkeen.pdf # M2: Software Architecture Document
+│   ├── elements.yaml                  # one list of element names used in every view
+│   ├── diagrams/                      # M2 views (C4 L2, C4 L3, sequences, deployment, data)
+│   ├── adr/                           # ADR-001 to ADR-007
+│   ├── api/                           # openapi.yaml, event schemas, example events
+│   ├── traceability/                  # QAS -> elements -> tactics -> ADRs -> M3 tests, plus a check script
+│   └── tools/                         # small scripts for the checks
+└── .github/workflows/docs-checks.yml  # runs the checks on every push to docs/
+```
+
+## Milestone 2 at a glance
+
+We went with a React web app talking to one Node.js + Express API built as a modular monolith. Each module owns its own MongoDB collections, and disability data sits in a separate encrypted database that only the Consent Module can open. The full reasoning, the style comparison and all the views are in the [M2 PDF](docs/M2/successEnablers_tamkeen.pdf).
+
+To re-run the checks locally (from the repo root):
+
+```
+npm install --prefix docs/tools
+docs/tools/node_modules/.bin/redocly lint docs/api/openapi.yaml --config redocly.yaml
+NODE_PATH=docs/tools/node_modules node docs/tools/validate-events.js
+python3 docs/traceability/check_traceability.py
 ```
 
 ## Diagrams
@@ -106,4 +126,4 @@ flowchart LR
 
 ## Tech stack (planned)
 
-MERN (MongoDB, Express, React, Node.js), Firebase Authentication for sign-in shared with the wider Tamkeen platform, and Brevo for email. Everything runs on free tiers.
+MERN (MongoDB, Express, React, Node.js), Firebase Authentication for sign-in shared with the wider Tamkeen platform, and the Brevo email API. Everything runs on free tiers: Vercel for the web app, Render for the API and MongoDB Atlas for the database.
