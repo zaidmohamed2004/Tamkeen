@@ -1,5 +1,7 @@
 # ADR-001: Use a modular monolith API behind a single-page web app (client-server)
 
+In short: one API with clear modules inside it, plus a separate web app. It's the only setup that fits our free hosting and still keeps the sensitive parts walled off.
+
 | Field | Content |
 |---|---|
 | ADR number & title | ADR-001: Use a modular monolith API behind a single-page web app (client-server) |

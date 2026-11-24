@@ -1,5 +1,7 @@
 # ADR-005: Protect submissions with client drafts, retry with backoff and idempotency keys
 
+In short: the free server sleeps, so the app saves your answers on your device and retries safely without ever sending an application twice.
+
 | Field | Content |
 |---|---|
 | ADR number & title | ADR-005: Protect submissions with client drafts, retry with backoff and idempotency keys |

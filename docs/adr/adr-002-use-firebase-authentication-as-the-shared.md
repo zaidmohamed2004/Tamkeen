@@ -1,5 +1,7 @@
 # ADR-002: Use Firebase Authentication as the shared identity provider
 
+In short: everyone signs in with Firebase, the same account they use in the Tamkeen mobile app, so we never store passwords ourselves.
+
 | Field | Content |
 |---|---|
 | ADR number & title | ADR-002: Use Firebase Authentication as the shared identity provider |

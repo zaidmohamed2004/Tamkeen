@@ -1,5 +1,7 @@
 # ADR-004: Send email through the Brevo HTTP API using a transactional outbox
 
+In short: this one changed after we checked Render's free plan. It blocks the SMTP ports, so emails go through Brevo's web API instead, from an outbox so nothing gets lost.
+
 | Field | Content |
 |---|---|
 | ADR number & title | ADR-004: Send email through the Brevo HTTP API using a transactional outbox |

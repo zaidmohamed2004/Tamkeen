@@ -1,5 +1,7 @@
 # ADR-007: Use rule-based, explainable matching and an in-process cache for job search
 
+In short: simple matching we can explain in plain words, plus a small cache so search stays fast on the free database.
+
 | Field | Content |
 |---|---|
 | ADR number & title | ADR-007: Use rule-based, explainable matching and an in-process cache for job search |

@@ -1,5 +1,7 @@
 # ADR-006: Store quota rules as versioned data in the Quota Module
 
+In short: the quota rule (5%, 20 employees, round up) is stored as data, so an admin can change it without touching the code.
+
 | Field | Content |
 |---|---|
 | ADR number & title | ADR-006: Store quota rules as versioned data in the Quota Module |

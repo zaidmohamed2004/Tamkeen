@@ -1,8 +1,10 @@
-# Architecture Decision Records
+# Architecture decisions
 
-Template: CSE4203 Appendix A.
+These are the main decisions we made while designing Tamkeen for Milestone 2. Each one follows the ADR template from the course brief (Appendix A), so every file has the context, the options we looked at, what we picked and what it costs us.
 
-| ADR | Title | Status |
+If you only read one, read ADR-001. It explains the overall structure, and the rest build on it.
+
+| ADR | Decision | Status |
 |---|---|---|
 | [ADR-001](adr-001-use-a-modular-monolith-api-behind.md) | Use a modular monolith API behind a single-page web app (client-server) | Accepted |
 | [ADR-002](adr-002-use-firebase-authentication-as-the-shared.md) | Use Firebase Authentication as the shared identity provider | Accepted |

@@ -1,5 +1,7 @@
 # ADR-003: Keep disability data in a separate encrypted Sensitive Store reached only through the Consent Module
 
+In short: disability data goes in its own encrypted database, and only one module is allowed to touch it.
+
 | Field | Content |
 |---|---|
 | ADR number & title | ADR-003: Keep disability data in a separate encrypted Sensitive Store reached only through the Consent Module |
